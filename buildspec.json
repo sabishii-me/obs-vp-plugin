@@ -36,10 +36,13 @@
             "bundleId": "com.example.plugintemplate-for-obs"
         }
     },
-    "name": "plugintemplate-for-obs",
-    "displayName": "Plugin Template for OBS",
-    "version": "1.0.0",
-    "author": "Your Name Here",
+    "uuids": {
+        "windowsApp": "15642E80-33BB-4282-80E5-229DD277EE83"
+    },
+    "name": "obs-vp-plugin",
+    "displayName": "OBS Virtual Production Plugin",
+    "version": "1.3.0",
+    "author": "Colin",
     "website": "https://example.com",
     "email": "me@example.com"
 }

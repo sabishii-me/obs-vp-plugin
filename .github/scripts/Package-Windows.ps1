@@ -53,6 +53,7 @@ function Package {
         ErrorAction = 'SilentlyContinue'
         Path = @(
             "${ProjectRoot}/release/${ProductName}-*-windows-*.zip"
+            "${ProjectRoot}/release/${ProductName}-*-windows-*-Installer.exe"
         )
     }
 
@@ -66,6 +67,21 @@ function Package {
         Verbose = ($Env:CI -ne $null)
     }
     Compress-Archive -Force @CompressArgs
+    Log-Group
+
+    # Windows Installer via Inno Setup
+    $IsccFile = "${ProjectRoot}/build_${Target}/installer-Windows.generated.iss"
+    if ( ! ( Test-Path -Path $IsccFile ) ) {
+        throw 'Inno Setup script not found. Run the build step first.'
+    }
+
+    Log-Group "Creating Inno Setup installer for ${ProductName}..."
+    Push-Location -Stack BuildTemp
+    Ensure-Location -Path "${ProjectRoot}/release"
+    Copy-Item -Path ${Configuration} -Destination Package -Recurse
+    Invoke-External iscc ${IsccFile} /O"${ProjectRoot}/release" /F"${OutputName}-Installer"
+    Remove-Item -Path Package -Recurse
+    Pop-Location -Stack BuildTemp
     Log-Group
 }
 

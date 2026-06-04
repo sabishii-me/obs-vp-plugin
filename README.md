@@ -1,59 +1,165 @@
-# OBS Plugin Template
+# OBS Virtual Production Plugin
 
-## Introduction
+An OBS Studio plugin for virtual production workflows. Provides a workspace root configuration and a WebSocket API for remote tools to create project folders inside that workspace.
 
-The plugin template is meant to be used as a starting point for OBS Studio plugin development. It includes:
+## Features
 
-* Boilerplate plugin source code
-* A CMake project file
-* GitHub Actions workflows and repository actions
+- Set a **workspace root folder** via Tools menu in OBS
+- Remote tools create **subfolders** under the workspace root via obs-websocket v5
+- Path traversal and invalid characters are rejected — remote callers cannot escape the workspace root
 
-## Supported Build Environments
+## Installation
 
-| Platform  | Tool   |
-|-----------|--------|
-| Windows   | Visual Studio 17 2022 |
-| macOS     | XCode 16.0 |
-| Windows, macOS  | CMake 3.30.5 |
-| Ubuntu 24.04 | CMake 3.28.3 |
-| Ubuntu 24.04 | `ninja-build` |
-| Ubuntu 24.04 | `pkg-config`
-| Ubuntu 24.04 | `build-essential` |
+Run the installer:
+```
+obs-vp-plugin-<version>-windows-x64-Installer.exe
+```
+The installer detects your OBS Studio path automatically and places files in the correct locations.
 
-## Quick Start
+## Setup
 
-An absolute bare-bones [Quick Start Guide](https://github.com/obsproject/obs-plugintemplate/wiki/Quick-Start-Guide) is available in the wiki.
+1. Open OBS Studio
+2. Go to **Tools → VP Plugin Settings...**
+3. Click **Browse...** and select your workspace root folder
+4. Click **OK** — the path is saved and persists across restarts
 
-## Documentation
+## WebSocket API
 
-All documentation can be found in the [Plugin Template Wiki](https://github.com/obsproject/obs-plugintemplate/wiki).
+The plugin registers vendor requests through the built-in **obs-websocket v5** (OBS 28+). No separate server or port needed.
 
-Suggested reading to get up and running:
+### Authentication
 
-* [Getting started](https://github.com/obsproject/obs-plugintemplate/wiki/Getting-Started)
-* [Build system requirements](https://github.com/obsproject/obs-plugintemplate/wiki/Build-System-Requirements)
-* [Build system options](https://github.com/obsproject/obs-plugintemplate/wiki/CMake-Build-System-Options)
+Connect to obs-websocket as normal (default port `4455`). See the [obs-websocket docs](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md) for the authentication handshake.
 
-## GitHub Actions & CI
+### How to call a vendor request
 
-Default GitHub Actions workflows are available for the following repository actions:
+All plugin requests use the standard `CallVendorRequest` type:
 
-* `push`: Run for commits or tags pushed to `master` or `main` branches.
-* `pr-pull`: Run when a Pull Request has been pushed or synchronized.
-* `dispatch`: Run when triggered by the workflow dispatch in GitHub's user interface.
-* `build-project`: Builds the actual project and is triggered by other workflows.
-* `check-format`: Checks CMake and plugin source code formatting and is triggered by other workflows.
+```json
+{
+  "op": 6,
+  "d": {
+    "requestType": "CallVendorRequest",
+    "requestId": "your-id",
+    "requestData": {
+      "vendorName": "vp-plugin",
+      "requestType": "<REQUEST_NAME>",
+      "requestData": { }
+    }
+  }
+}
+```
 
-The workflows make use of GitHub repository actions (contained in `.github/actions`) and build scripts (contained in `.github/scripts`) which are not needed for local development, but might need to be adjusted if additional/different steps are required to build the plugin.
+Check the response inside `responseData.responseData`:
+- `success: true` — operation succeeded, additional fields vary per request
+- `success: false` — operation failed, `error` field contains the reason
 
-### Retrieving build artifacts
+---
 
-Successful builds on GitHub Actions will produce build artifacts that can be downloaded for testing. These artifacts are commonly simple archives and will not contain package installers or installation programs.
+### `VPPlugin_Workspace_CreateFolder`
 
-### Building a Release
+Creates a subfolder inside the configured workspace root.
 
-To create a release, an appropriately named tag needs to be pushed to the `main`/`master` branch using semantic versioning (e.g., `12.3.4`, `23.4.5-beta2`). A draft release will be created on the associated repository with generated installer packages or installation programs attached as release artifacts.
+**Request data**
 
-## Signing and Notarizing on macOS
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `folderName` | string | yes | Name of the folder to create. Must be a plain name — no path separators, no `..`, no control characters, no Windows-reserved characters (`/ \ : * ? " < > |`) |
 
-Basic concepts of codesigning and notarization on macOS are explained in the correspodning [Wiki article](https://github.com/obsproject/obs-plugintemplate/wiki/Codesigning-On-macOS) which has a specific section for the [GitHub Actions setup](https://github.com/obsproject/obs-plugintemplate/wiki/Codesigning-On-macOS#setting-up-code-signing-for-github-actions).
+**Response data**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | bool | `true` if the folder was created |
+| `path` | string | Absolute path of the created folder (on success) |
+| `error` | string | Error message (on failure) |
+
+**Example request**
+
+```json
+{
+  "op": 6,
+  "d": {
+    "requestType": "CallVendorRequest",
+    "requestId": "create-shot-001",
+    "requestData": {
+      "vendorName": "vp-plugin",
+      "requestType": "VPPlugin_Workspace_CreateFolder",
+      "requestData": {
+        "folderName": "SHOT_001_T001"
+      }
+    }
+  }
+}
+```
+
+**Example success response**
+
+```json
+{
+  "op": 7,
+  "d": {
+    "requestId": "create-shot-001",
+    "requestType": "CallVendorRequest",
+    "requestStatus": { "code": 100, "result": true },
+    "responseData": {
+      "vendorName": "vp-plugin",
+      "requestType": "VPPlugin_Workspace_CreateFolder",
+      "responseData": {
+        "success": true,
+        "path": "C:\\Users\\colin\\Downloads\\SHOT_001_T001"
+      }
+    }
+  }
+}
+```
+
+**Example error response**
+
+```json
+{
+  "responseData": {
+    "success": false,
+    "error": "folderName must be a plain name with no path separators or traversal sequences"
+  }
+}
+```
+
+**Error cases**
+
+| Error | Cause |
+|-------|-------|
+| `folderName is required` | Empty or missing `folderName` |
+| `folderName must be a plain name...` | Name contains `/`, `\`, `:`, `*`, `?`, `"`, `<`, `>`, `\|`, control characters, or is `.` / `..` |
+| `Workspace root is not configured` | No workspace root set in Tools → VP Plugin Settings |
+| `Invalid workspace root path` | The saved workspace root path is invalid |
+| `folderName must resolve inside the workspace root` | Canonical path check failed |
+
+---
+
+## Building from Source
+
+**Requirements:** Visual Studio 2022, CMake 3.28+
+
+```bash
+git clone <repo>
+cd obs-vp-plugin
+cmake --preset windows-x64
+cmake --build build_x64 --config RelWithDebInfo
+```
+
+To produce an installer:
+```bash
+cmake --install build_x64 --prefix release/RelWithDebInfo --config RelWithDebInfo
+cp -r release/RelWithDebInfo/. release/Package/
+iscc build_x64/installer-Windows.generated.iss
+```
+
+## Version History
+
+| Version | Changes |
+|---------|---------|
+| 1.3.0 | Block control characters and Windows-reserved chars in folderName |
+| 1.2.0 | Fix crash on bad folderName; wrap filesystem calls in error_code |
+| 1.1.0 | Fix settings not persisting (ensure plugin config dir exists on load) |
+| 1.0.0 | Initial release — workspace root setting, VPPlugin_Workspace_CreateFolder API |
