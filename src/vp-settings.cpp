@@ -32,8 +32,7 @@ void vp_settings_save()
 
 	config_t *cfg = nullptr;
 	if (config_open(&cfg, config_path, CONFIG_OPEN_ALWAYS) == CONFIG_SUCCESS) {
-		config_set_string(cfg, SECTION, KEY_WORKSPACE_ROOT,
-				  g_workspaceRoot.c_str());
+		config_set_string(cfg, SECTION, KEY_WORKSPACE_ROOT, g_workspaceRoot.c_str());
 		config_save_safe(cfg, "tmp", nullptr);
 		config_close(cfg);
 	}

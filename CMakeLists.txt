@@ -36,15 +36,14 @@ endif()
 
 target_sources(
   ${CMAKE_PROJECT_NAME}
-  PRIVATE
-    src/plugin-main.cpp
-    src/vp-settings.cpp
-    src/settings-dialog.cpp
-    src/ws-handler.cpp)
+  PRIVATE src/plugin-main.cpp src/vp-settings.cpp src/settings-dialog.cpp src/ws-handler.cpp
+)
 
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
 
 if(OS_WINDOWS)
-  configure_file(cmake/windows/resources/installer-Windows.iss.in
-    "${CMAKE_CURRENT_BINARY_DIR}/installer-Windows.generated.iss")
+  configure_file(
+    cmake/windows/resources/installer-Windows.iss.in
+    "${CMAKE_CURRENT_BINARY_DIR}/installer-Windows.generated.iss"
+  )
 endif()

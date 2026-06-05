@@ -12,8 +12,7 @@ OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
 static void open_settings_dialog(void * /*priv*/)
 {
-	SettingsDialog dlg(
-		static_cast<QWidget *>(obs_frontend_get_main_window()));
+	SettingsDialog dlg(static_cast<QWidget *>(obs_frontend_get_main_window()));
 	dlg.exec();
 }
 
@@ -28,11 +27,9 @@ bool obs_module_load(void)
 
 	vp_settings_load();
 
-	obs_frontend_add_tools_menu_item("VP Plugin Settings...",
-					 open_settings_dialog, nullptr);
+	obs_frontend_add_tools_menu_item("VP Plugin Settings...", open_settings_dialog, nullptr);
 
-	obs_log(LOG_INFO, "plugin loaded successfully (version %s)",
-		PLUGIN_VERSION);
+	obs_log(LOG_INFO, "plugin loaded successfully (version %s)", PLUGIN_VERSION);
 	return true;
 }
 
