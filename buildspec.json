@@ -41,7 +41,7 @@
     },
     "name": "obs-vp-plugin",
     "displayName": "OBS Virtual Production Plugin",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "author": "Colin",
     "website": "https://example.com",
     "email": "me@example.com"
