@@ -9,8 +9,15 @@ on:
 permissions:
   contents: write
 jobs:
+  check-format:
+    name: Check Formatting 🔍
+    uses: ./.github/workflows/check-format.yaml
+    permissions:
+      contents: read
+
   build-project:
     name: Build Project 🧱
+    needs: check-format
     uses: ./.github/workflows/build-project.yaml
     secrets: inherit
     permissions:
